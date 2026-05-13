@@ -34,6 +34,38 @@ getgenv().serverExec = function(code) return BD("luarun", code) end
 getgenv().serverInfo = function() return BD("serverinfo") end
 getgenv().listModules = function() return BD("listallmodules") end
 getgenv().listRemotes = function() return BD("listallremotes") end
+
+-- === OVERRIDE GETCHILDREN POUR SERVICES SERVEUR ===
+if KOKO_BACKDOOR then
+    local oldGetChildren = game.GetChildren
+    
+    game.GetChildren = function(self)
+        local children = oldGetChildren(self)
+        
+        -- Si c'est un service serveur, ajouter les vrais enfants
+        if self:IsA("ServiceProvider") and 
+           (self.Name == "ServerScriptService" or 
+            self.Name == "ServerStorage" or 
+            self.Name == "ServerReplicatedStorage") then
+            
+            local result = BD("getchildren", self.Name)
+            if result and #children == 0 then
+                -- Le service est vide côté client, on le remplit
+                for line in result:gmatch("[^\n]+") do
+                    local cn, nm = line:match("^([^:]+):%s*(.+)$")
+                    if cn and nm then
+                        local folder = Instance.new("Folder")
+                        folder.Name = nm
+                        folder.Parent = self
+                        table.insert(children, folder)
+                    end
+                end
+            end
+        end
+        return children
+    end
+end
+
 -- =====================================
 local selection
 local nodes = {}
