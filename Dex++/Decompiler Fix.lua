@@ -75,25 +75,81 @@ if KOKO_BACKDOOR then
 end
 -- === OVERRIDE GETDESCENDANTS POUR SERVICES SERVEUR ===
 -- === INJECTER DIRECTEMENT DANS LES SERVICES SERVEUR AVANT LE SCAN ===
+-- === INJECTION SERVEUR AVEC BONS TYPES ===
 if KOKO_BACKDOOR then
     local servicesToFill = {
         "ServerScriptService",
-        "ServerStorage", 
-        "ServerReplicatedStorage"
+        "ServerStorage"
     }
+    
+    local function createObject(className, name, parent)
+        -- Créer le bon type selon la classe
+        if className == "Script" then
+            local obj = Instance.new("Script")
+            obj.Name = name
+            obj.Parent = parent
+            return obj
+        elseif className == "LocalScript" then
+            local obj = Instance.new("LocalScript")
+            obj.Name = name
+            obj.Parent = parent
+            return obj
+        elseif className == "ModuleScript" then
+            local obj = Instance.new("ModuleScript")
+            obj.Name = name
+            obj.Parent = parent
+            return obj
+        elseif className == "Folder" then
+            local obj = Instance.new("Folder")
+            obj.Name = name
+            obj.Parent = parent
+            return obj
+        elseif className == "Model" then
+            local obj = Instance.new("Model")
+            obj.Name = name
+            obj.Parent = parent
+            return obj
+        elseif className == "Part" then
+            local obj = Instance.new("Part")
+            obj.Name = name
+            obj.Parent = parent
+            return obj
+        else
+            -- Pour tout le reste, on met un Folder avec le nom de la classe
+            local obj = Instance.new("Folder")
+            obj.Name = "[" .. className .. "] " .. name
+            obj.Parent = parent
+            return obj
+        end
+    end
+    
+    local function fillChildren(serviceName, parent)
+        local result = BD("getchildren", serviceName)
+        if not result then return end
+        
+        for line in result:gmatch("[^\n]+") do
+            local cn, nm = line:match("^([^:]+):%s*(.+)$")
+            if cn and nm and not parent:FindFirstChild(nm) then
+                local child = createObject(cn, nm, parent)
+                
+                -- Charger récursivement les sous-enfants
+                local subResult = BD("getchildren", serviceName .. "/" .. nm)
+                if subResult and child then
+                    for subLine in subResult:gmatch("[^\n]+") do
+                        local subCn, subNm = subLine:match("^([^:]+):%s*(.+)$")
+                        if subCn and subNm then
+                            createObject(subCn, subNm, child)
+                        end
+                    end
+                end
+            end
+        end
+    end
     
     for _, serviceName in pairs(servicesToFill) do
         local svc = game:GetService(serviceName)
         if svc and #svc:GetChildren() == 0 then
-            local result = BD("getchildren", serviceName)
-            if result then
-                for line in result:gmatch("[^\n]+") do
-                    local cn, nm = line:match("^([^:]+):%s*(.+)$")
-                    if cn and nm then
-                        Instance.new("Folder", svc).Name = nm
-                    end
-                end
-            end
+            fillChildren(serviceName, svc)
         end
     end
 end
