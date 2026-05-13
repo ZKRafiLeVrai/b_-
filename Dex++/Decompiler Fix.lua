@@ -75,49 +75,27 @@ if KOKO_BACKDOOR then
     end
 end
 -- === OVERRIDE GETDESCENDANTS POUR SERVICES SERVEUR ===
+-- === INJECTER DIRECTEMENT DANS LES SERVICES SERVEUR AVANT LE SCAN ===
 if KOKO_BACKDOOR then
-    local oldGetDescendants = game.GetDescendants
+    local servicesToFill = {
+        "ServerScriptService",
+        "ServerStorage", 
+        "ServerReplicatedStorage"
+    }
     
-    game.GetDescendants = function(self)
-        local descendants = oldGetDescendants(self)
-        
-        if self:IsA("DataModel") then
-            local serverServices = {"ServerScriptService", "ServerStorage", "ServerReplicatedStorage"}
-            
-            for _, sn in pairs(serverServices) do
-                local svc = game:GetService(sn)
-                if svc then
-                    local result = BD("getchildren", sn)
-                    if result then
-                        for line in result:gmatch("[^\n]+") do
-                            local cn, nm = line:match("^([^:]+):%s*(.+)$")
-                            if cn and nm and not svc:FindFirstChild(nm) then
-                                local folder = Instance.new("Folder")
-                                folder.Name = nm
-                                folder.Parent = svc
-                                table.insert(descendants, folder)
-                                
-                                -- Charger les sous-enfants
-                                local subResult = BD("getchildren", sn .. "/" .. nm)
-                                if subResult then
-                                    for subLine in subResult:gmatch("[^\n]+") do
-                                        local subCn, subNm = subLine:match("^([^:]+):%s*(.+)$")
-                                        if subCn and subNm then
-                                            local subFolder = Instance.new("Folder")
-                                            subFolder.Name = subNm
-                                            subFolder.Parent = folder
-                                            table.insert(descendants, subFolder)
-                                        end
-                                    end
-                                end
-                            end
-                        end
+    for _, serviceName in pairs(servicesToFill) do
+        local svc = game:GetService(serviceName)
+        if svc and #svc:GetChildren() == 0 then
+            local result = BD("getchildren", serviceName)
+            if result then
+                for line in result:gmatch("[^\n]+") do
+                    local cn, nm = line:match("^([^:]+):%s*(.+)$")
+                    if cn and nm then
+                        Instance.new("Folder", svc).Name = nm
                     end
                 end
             end
         end
-        
-        return descendants
     end
 end
 
