@@ -40,8 +40,7 @@ getgenv().listRemotes = function() return BD("listallremotes") end
 if KOKO_BACKDOOR then
     local serverServices = {
         ["ServerScriptService"] = true,
-        ["ServerStorage"] = true, 
-        ["ServerReplicatedStorage"] = true
+        ["ServerStorage"] = true
     }
     
     -- Hook sur game.DescendantAdded pour injecter au moment où Dex découvre le service
